@@ -2,7 +2,7 @@ name: Daily Commit
 
 on:
   schedule:
-    - cron: '0 5 * * *'  # Every day at 5 AM UTC
+    - cron: '0 5 * * *'  # Runs daily at 5 AM UTC
   workflow_dispatch:
 
 jobs:
@@ -13,12 +13,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Debug Git Status
+        run: |
+          echo "Checking current repo status"
+          git status
+          git remote -v
+
       - name: Make a commit
         run: |
           echo "Updated on $(date)" >> activity_log.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add activity_log.txt
           git commit -m "Daily update: $(date)" || echo "No changes to commit"
+
+      - name: Push changes
+        run: |
+          echo "Setting remote with token"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git push

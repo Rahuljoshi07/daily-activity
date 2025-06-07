@@ -1,4 +1,4 @@
-name: Daily Commit
+name: Daily Random Commits
 
 on:
   schedule:
@@ -18,17 +18,19 @@ jobs:
           git config --global user.name "Rahul Joshi"
           git config --global user.email "rj1342627@gmail.com"
 
-      - name: Debug Git Status
+      - name: Make multiple random commits
         run: |
-          echo "Checking current repo status"
-          git status
-          git remote -v
+          echo "Starting random commits..."
+          COUNT=$(( ( RANDOM % 10 ) + 3 ))  # Random number between 3 and 12
+          echo "Will make $COUNT commits today."
 
-      - name: Make a commit
-        run: |
-          echo "Updated on $(date)" >> activity_log.txt
-          git add activity_log.txt
-          git commit -m "Daily update: $(date)" || echo "No changes to commit"
+          for i in $(seq 1 $COUNT)
+          do
+            echo "Commit #$i on $(date)" >> activity_log.txt
+            git add activity_log.txt
+            git commit -m "Random commit #$i on $(date)"
+            sleep 1  # Optional: short delay to make commits look natural
+          done
 
       - name: Push changes
         run: |

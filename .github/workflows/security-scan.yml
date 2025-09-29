@@ -12,18 +12,25 @@ jobs:
   security-scan:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         scan-type: 'fs'
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
+        # Focus on configuration files and workflows since there's no app code
+        scanners: 'config,secret'
         
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
@@ -31,17 +38,19 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
         
-    - name: Run npm audit (if package.json exists)
+    - name: Scan GitHub Actions workflows for security issues
       run: |
-        if [ -f "package.json" ]; then
-          npm audit --audit-level moderate
+        echo "Checking GitHub Actions workflows for security best practices..."
+        # Check for hardcoded secrets or tokens
+        if grep -r "ghp_\|github_pat_" .github/workflows/; then
+          echo "::error::Found potential hardcoded GitHub tokens in workflows"
+          exit 1
         fi
-      continue-on-error: true
-      
-    - name: Run pip safety check (if requirements.txt exists)
-      run: |
-        if [ -f "requirements.txt" ]; then
-          pip install safety
-          safety check -r requirements.txt
+        
+        # Check for use of secrets in workflow files (should use secrets context)
+        if grep -r "password\|token\|key" .github/workflows/ | grep -v "secrets\." | grep -v "github.token"; then
+          echo "::warning::Found potential unprotected sensitive data in workflows - ensure using secrets context"
         fi
+        
+        echo "GitHub Actions security scan completed"
       continue-on-error: true
